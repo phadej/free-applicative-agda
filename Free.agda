@@ -4,6 +4,7 @@ module Free where
 
 open import Agda.Primitive
 open import Prelude
+open import Builtin.Size
 
 open import WellFounded
 
@@ -85,8 +86,41 @@ module Ap {ℓ₁ ℓ₂} (F : Set ℓ₁ -> Set ℓ₂) where
   freeAp-agda-wf′ {a = a} (Ap tx ay) (acc f) tz
     = Ap (freeAp-agda-wf′ (freeMap flip tx) (f ((a , _) , freeMap flip tx) (freeAp-rec-proof tx)) tz) ay
 
-  freeAp-agda-wf : {a b : Set ℓ₁} → (f : Free (a → b)) → Free a → Free b
+  freeAp-agda-wf : {a b : Set ℓ₁} → Free (a → b) → Free a → Free b
   freeAp-agda-wf  f = freeAp-agda-wf′ f (wf freeApMeasure (_ , f))
+
+  -- sized types
+  data SFree  (a : Set ℓ₁) : {_ : Size} -> Set (lsuc ℓ₁ ⊔ ℓ₂) where
+    Pure : ∀ {i} → a → SFree a {↑ i}
+    Ap   : ∀ {i} {b : Set ℓ₁} → SFree (b → a) {i} → F b → SFree a {↑ i}
+
+  fromFree : ∀ {a} → Free a → SFree a
+  fromFree (Pure x) = Pure x
+  fromFree (Ap x x₁) = Ap (fromFree x) x₁
+
+  toFree : ∀ {a} → SFree a → Free a
+  toFree (Pure x) = Pure x
+  toFree (Ap x x₁) = Ap (toFree x) x₁
+
+  freeMap-sized : ∀ {i} {a b : Set ℓ₁} → (a → b) → SFree a {i} → SFree b {i}
+  freeMap-sized g (Pure x) = Pure (g x)
+  freeMap-sized g (Ap tx ay) = Ap (freeMap-sized (λ h x → g (h x)) tx) ay
+
+  -- The below doesn't work as index is erased in between
+  --  freeMap-sized f = fromFree ∘ freeMap f ∘ toFree
+
+  -- And actually we can't use sized types here as there aren't + for Size.
+  -- http://www2.tcs.ifi.lmu.de/~abel/talkAIM2008Sendai.pdf
+  postulate
+    freeAp-sized′ : {a b : Set ℓ₁} → SFree (a → b) → SFree a → SFree b
+  {-
+  freeAp-sized′ : {i j} {a b : Set ℓ₁} → SFree (a → b) {i} → SFree a {j} → SFree b {i + j}
+  freeAp-sized′ (Pure g) tx = freeMap-sized g tx
+  freeAp-sized′ (Ap tx ay) tz = Ap (freeAp-sized′ (freeMap-sized flip tx) tz) ay
+  -}
+
+  freeAp-sized : {a b : Set ℓ₁} → Free (a → b) → Free a → Free b
+  freeAp-sized f x = toFree (freeAp-sized′ (fromFree f) (fromFree x))
 
   -- We can pick any
   ApplicativeFree : Applicative Free
