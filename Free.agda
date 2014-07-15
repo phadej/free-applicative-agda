@@ -109,15 +109,9 @@ module Ap {ℓ₁ ℓ₂} (F : Set ℓ₁ -> Set ℓ₂) where
   -- The below doesn't work as index is erased in between
   --  freeMap-sized f = fromFree ∘ freeMap f ∘ toFree
 
-  -- And actually we can't use sized types here as there aren't + for Size.
-  -- http://www2.tcs.ifi.lmu.de/~abel/talkAIM2008Sendai.pdf
-  postulate
-    freeAp-sized′ : {a b : Set ℓ₁} → SFree (a → b) → SFree a → SFree b
-  {-
-  freeAp-sized′ : {i j} {a b : Set ℓ₁} → SFree (a → b) {i} → SFree a {j} → SFree b {i + j}
+  freeAp-sized′ : ∀ {i} {a b : Set ℓ₁} → SFree (a → b) {i} → SFree a → SFree b
   freeAp-sized′ (Pure g) tx = freeMap-sized g tx
-  freeAp-sized′ (Ap tx ay) tz = Ap (freeAp-sized′ (freeMap-sized flip tx) tz) ay
-  -}
+  freeAp-sized′ (Ap {i} tx ay) tz = Ap (freeAp-sized′ (freeMap-sized {i} flip tx) tz) ay
 
   freeAp-sized : {a b : Set ℓ₁} → Free (a → b) → Free a → Free b
   freeAp-sized f x = toFree (freeAp-sized′ (fromFree f) (fromFree x))
