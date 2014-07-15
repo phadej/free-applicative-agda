@@ -84,7 +84,8 @@ module Ap {ℓ₁ ℓ₂} (F : Set ℓ₁ -> Set ℓ₂) where
   freeAp-agda-wf′ : {a b : Set ℓ₁} → (f : Free (a → b)) → Acc freeApMeasure ((a , b) , f) → Free a → Free b
   freeAp-agda-wf′ (Pure g) _ tx = freeMap g tx
   freeAp-agda-wf′ {a = a} (Ap tx ay) (acc f) tz
-    = Ap (freeAp-agda-wf′ (freeMap flip tx) (f ((a , _) , freeMap flip tx) (freeAp-rec-proof tx)) tz) ay
+    = Ap (freeAp-agda-wf′ x (f ((a , _) , x) (freeAp-rec-proof tx)) tz) ay
+    where x = freeMap flip tx
 
   freeAp-agda-wf : {a b : Set ℓ₁} → Free (a → b) → Free a → Free b
   freeAp-agda-wf  f = freeAp-agda-wf′ f (wf freeApMeasure (_ , f))
