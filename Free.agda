@@ -36,7 +36,7 @@ module Ap {ℓ₁ ℓ₂} (F : Set ℓ₁ -> Set ℓ₂) where
   freeAp (Ap tx ay) tz = Ap (freeAp (freeMap flip tx) tz) ay
   -}
 
-  -- Definition using size index
+  -- Definition using explicit size index
   freeSize : {a : Set ℓ₁} → Free a → ℕ
   freeSize (Pure _) = zero
   freeSize (Ap x _) = suc (freeSize x)
@@ -45,16 +45,16 @@ module Ap {ℓ₁ ℓ₂} (F : Set ℓ₁ -> Set ℓ₂) where
   freeMap-size-invariant (Pure _) = refl
   freeMap-size-invariant (Ap x _) = cong suc (freeMap-size-invariant x)
 
-  freeAp' : {a b : Set ℓ₁} → (f : Free (a → b)) (n : ℕ) → freeSize f ≡ n → Free a → Free b
-  freeAp' (Pure g) _ _ tx = freeMap g tx
-  freeAp' (Ap tx ay) zero () tz
-  freeAp' (Ap tx ay) (suc n) pf tz = Ap (freeAp' (freeMap flip tx) n pf' tz) ay
+  freeAp-index′ : {a b : Set ℓ₁} → (f : Free (a → b)) (n : ℕ) → freeSize f ≡ n → Free a → Free b
+  freeAp-index′ (Pure g) _ _ tx = freeMap g tx
+  freeAp-index′ (Ap tx ay) zero () tz
+  freeAp-index′ (Ap tx ay) (suc n) pf tz = Ap (freeAp-index′ (freeMap flip tx) n pf' tz) ay
     where pf' = (trans (freeMap-size-invariant tx) (suc-inj pf))
 
-  freeAp : {a b : Set ℓ₁} → Free (a → b) → Free a → Free b
-  freeAp f x = freeAp' f (freeSize f) refl x
+  freeAp-index : {a b : Set ℓ₁} → Free (a → b) → Free a → Free b
+  freeAp-index f x = freeAp-index′ f (freeSize f) refl x
 
-  -- Definition using well founded induction
+  -- Definition using well founded induction, coq-y way.
   measure-type : Set (lsuc ℓ₁ ⊔ ℓ₂)
   measure-type = Σ (Set ℓ₁ × Set ℓ₁) (λ a → Free (fst a → snd a))
 
@@ -79,5 +79,15 @@ module Ap {ℓ₁ ℓ₂} (F : Set ℓ₁ -> Set ℓ₂) where
   freeAp-wf : {a b : Set ℓ₁} → Free (a → b) → Free a → Free b
   freeAp-wf f = fix freeApMeasure freeAp-rec-type freeAp-rec (_ , f)
 
+  -- ... more agda way, looks like you don't need to use fix
+  freeAp-agda-wf′ : {a b : Set ℓ₁} → (f : Free (a → b)) → Acc freeApMeasure ((a , b) , f) → Free a → Free b
+  freeAp-agda-wf′ (Pure g) _ tx = freeMap g tx
+  freeAp-agda-wf′ {a = a} (Ap tx ay) (acc f) tz
+    = Ap (freeAp-agda-wf′ (freeMap flip tx) (f ((a , _) , freeMap flip tx) (freeAp-rec-proof tx)) tz) ay
+
+  freeAp-agda-wf : {a b : Set ℓ₁} → (f : Free (a → b)) → Free a → Free b
+  freeAp-agda-wf  f = freeAp-agda-wf′ f (wf freeApMeasure (_ , f))
+
+  -- We can pick any
   ApplicativeFree : Applicative Free
-  ApplicativeFree = record { pure = Pure ; _<*>_ = freeAp }
+  ApplicativeFree = record { pure = Pure ; _<*>_ = freeAp-index }
